@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Qualeidoscope</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300..700&display=swap" rel="stylesheet">
+<style>
+  :root { --ink: #ece9ff; --muted: #a7a3c4; --accent: #c9bcff; --panel: rgba(0, 0, 0, 0.74);
+    --font: "Outfit", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; color: var(--ink); font: 400 15px/1.5 var(--font); }
+  canvas#art { position: fixed; inset: 0; width: 100vw; height: 100vh; display: block; background: #000; touch-action: none; cursor: crosshair; }
+  .hud { text-shadow: 0 0 8px #000, 0 0 3px #000, 0 0 3px #000; }
+  .title { position: fixed; left: 18px; top: 14px; pointer-events: none; }
+  .title h1 { margin: 0; font-size: 1.2rem; font-weight: 600; letter-spacing: 0.03em; }
+  .title button { pointer-events: auto; margin-top: 8px; padding: 4px 12px; font-size: 0.82rem; }
+  .title p { margin: 2px 0 0; color: var(--muted); font-size: 0.82rem; letter-spacing: 0.04em; }
+  #panel { position: fixed; right: 14px; top: 14px; width: min(320px, calc(100vw - 28px)); max-height: calc(100vh - 28px);
+    overflow: auto; background: var(--panel); border-radius: 10px; padding: 12px 14px 14px; scrollbar-width: thin; scrollbar-color: #333 transparent; }
+  #showpanel { position: fixed; right: 14px; top: 14px; }
+  .toprow { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+  .toprow span, .grp { letter-spacing: 0.1em; text-transform: uppercase; font-size: 0.72rem; color: var(--muted); }
+  .grp { margin: 14px 0 6px; padding-top: 10px; border-top: 1px solid #222; }
+  .seg, .mach { display: flex; gap: 6px; margin-bottom: 8px; flex-wrap: wrap; }
+  .seg button { flex: 1; } .mach { display: grid; grid-template-columns: 1fr 1fr; } .mach button { width: 100%; }
+  button, select { font: inherit; color: var(--ink); background: transparent; border: 1px solid #3a3750; border-radius: 6px; padding: 6px 10px; cursor: pointer; letter-spacing: 0.03em; }
+  select { background: #0b0b10; width: 100%; }
+  button:hover, select:hover { border-color: var(--accent); }
+  button[aria-pressed="true"] { border-color: var(--accent); background: rgba(201, 188, 255, 0.14); }
+  button:focus-visible, input:focus-visible, summary:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  label { display: block; margin-top: 10px; font-weight: 600; letter-spacing: 0.04em; }
+  label .val { color: var(--muted); font-weight: 400; margin-left: 6px; font-variant-numeric: tabular-nums; }
+  .hint { color: var(--muted); font-size: 0.8rem; line-height: 1.35; margin: 0 0 3px; }
+  .desc { color: #cfcbe6; font-size: 0.84rem; line-height: 1.4; margin: 2px 0 6px; }
+  .read { font-size: 0.84rem; color: #cfcbe6; margin: 6px 0 0; }
+  .read b { font-weight: 600; color: var(--ink); font-variant-numeric: tabular-nums; }
+  input[type=range] { width: 100%; accent-color: var(--accent); }
+  .row { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 12px; }
+  .check { display: flex; gap: 8px; align-items: center; font-weight: 400; font-size: 0.84rem; margin-top: 8px; }
+  .ringbox { display: flex; gap: 10px; align-items: center; margin-top: 12px; padding-top: 10px; border-top: 1px solid #222; }
+  .ringbox p { margin: 0; color: var(--muted); font-size: 0.78rem; line-height: 1.35; }
+  details { margin-top: 12px; border-top: 1px solid #222; padding-top: 8px; }
+  summary { cursor: pointer; letter-spacing: 0.1em; text-transform: uppercase; font-size: 0.75rem; color: var(--muted); }
+  details p, details li { font-size: 0.84rem; line-height: 1.4; color: #cfcbe6; }
+  details ul { padding-left: 18px; margin: 4px 0; }
+  details h2 { font-size: 0.82rem; margin: 12px 0 2px; letter-spacing: 0.06em; color: var(--ink); }
+  .lab { position: fixed; top: 62px; transform: translateX(-50%); text-align: center; pointer-events: none; max-width: 46vw; }
+  .lab b { display: block; font-weight: 600; color: var(--c, #ece9ff); }
+  .lab span { display: block; font-size: 0.8rem; color: var(--muted); }
+  .look { margin: 0 0 9px; }
+  .lk { display: flex; gap: 8px; align-items: flex-start; font-weight: 400; margin: 0; cursor: pointer; }
+  .lk input { margin-top: 5px; accent-color: var(--accent); }
+  .lk i { width: 10px; height: 10px; border-radius: 3px; flex: none; margin-top: 7px; }
+  .lk b { font-weight: 600; } .lk em { color: var(--muted); font-style: normal; font-size: 0.82rem; }
+  .src { margin: 1px 0 0 36px; font-size: 0.76rem; line-height: 1.35; color: #b9b5d3; }
+  .tag { display: inline-block; font-size: 0.68rem; padding: 0 6px; border-radius: 6px; border: 1px solid #3a3750; color: var(--muted); white-space: nowrap; }
+  .ringbox { flex-direction: column; align-items: flex-start; }
+  canvas#ring { height: 150px; }
+  [hidden] { display: none !important; }
+  #panel:has(details.about[open]) { width: min(620px, calc(100vw - 28px)); }
+  .about h2 { font-size: 1.05rem; letter-spacing: 0.02em; margin: 26px 0 8px; padding-top: 14px; border-top: 1px solid #2a2a38; color: var(--ink); }
+  .about h2:first-of-type { margin-top: 14px; }
+  .about p { margin: 0 0 11px; line-height: 1.55; }
+  .about .note { border-left: 3px solid var(--accent); background: rgba(201, 188, 255, 0.08); padding: 8px 12px; border-radius: 0 6px 6px 0; }
+  .bs { border: 1px solid #2a2a38; border-radius: 10px; padding: 12px 14px 4px; margin: 0 0 14px; border-top: 3px solid var(--c); }
+  .bs h3 { margin: 0 0 10px; font-size: 1rem; display: flex; align-items: center; gap: 10px; }
+  .bs .num { flex: none; width: 24px; height: 24px; border-radius: 50%; background: var(--c); color: #000; display: inline-flex; align-items: center; justify-content: center; font-size: 0.85rem; font-weight: 600; }
+  .blk { margin: 0 0 12px; }
+  .blk .tag2 { font-size: 0.7rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--c); margin: 0 0 5px; font-weight: 600; }
+  .blk.vis { border-left: 3px solid var(--c); padding-left: 11px; }
+  .glance, .nums { width: 100%; border-collapse: collapse; font-size: 0.8rem; margin: 6px 0 14px; }
+  .glance th, .glance td, .nums th, .nums td { text-align: left; padding: 6px 8px; border-bottom: 1px solid #2a2a38; vertical-align: top; line-height: 1.35; }
+  .glance th, .nums th { color: var(--muted); font-weight: 400; font-size: 0.72rem; letter-spacing: 0.06em; text-transform: uppercase; }
+  .src dt, dl.srcs dt { font-weight: 600; color: var(--ink); margin-top: 6px; }
+  dl.srcs { margin: 0 0 8px; } dl.srcs dd { margin: 2px 0 0; color: #cfcbe6; font-size: 0.84rem; line-height: 1.5; }
+
+</style>
+</head>
+<body>
+<canvas id="art" aria-label="Kaleidoscope drawing area. Drag to draw."></canvas>
+
+<div class="title hud">
+  <h1>Qualeidoscope</h1>
+  <p>drag anywhere to draw &middot; every wedge is a qubit &middot; press H to hide the controls</p>
+  <button id="clear" type="button">Clear</button>
+</div>
+
+<div class="lab hud" id="lab0" hidden><b></b><span></span></div>
+<div class="lab hud" id="lab1" hidden><b></b><span></span></div>
+<button id="showpanel" type="button" hidden>Controls</button>
+
+<div id="panel" class="hud">
+  <div class="toprow"><span>Controls</span><button id="hide" type="button">Hide</button></div>
+
+  <div class="grp" style="margin-top:0;border-top:0;padding-top:0">Machines</div>
+  <div class="seg" role="group" aria-label="View">
+    <button type="button" data-view="single" aria-pressed="true">One machine</button>
+    <button type="button" data-view="split" aria-pressed="false">Compare IonQ and IBM</button>
+  </div>
+  <div id="machrow">
+    <div class="mach" role="group" aria-label="Machine">
+      <button type="button" data-m="perfect" aria-pressed="true">Perfect</button>
+      <button type="button" data-m="chaos" aria-pressed="false">Max chaos</button>
+      <button type="button" data-m="ionq" aria-pressed="false">IonQ</button>
+      <button type="button" data-m="sc" aria-pressed="false">IBM</button>
+    </div>
+  </div>
+  <div id="ionrow" hidden><select id="ion" aria-label="IonQ noise model"></select></div>
+  <div id="screw" hidden style="margin-top:6px"><select id="sc" aria-label="Superconducting chip"></select></div>
+  <p class="desc" id="mdesc"></p>
+  <div id="budget" hidden>
+    <p class="hint">Each machine gets 1 second to estimate each dab. It runs the circuit again and again in that time and averages the results. A faster machine fits in more runs. Fewer runs means more shot noise (broken symmetry 3).</p>
+    <p class="hint" id="shotsline"></p>
+    <label for="amp">Exaggerate differences <span class="val" id="ampval">&times;1.0</span></label>
+    <p class="hint">Real differences between qubits are small. This turns up how strongly every broken symmetry responds, equally for every machine and every broken symmetry.</p>
+    <input id="amp" type="range" min="0" max="1" step="0.01" value="0">
+  </div>
+
+  <div class="grp">The three broken symmetries</div>
+  <p class="hint">These are the three errors that most separate the two kinds of machine. Each breaks the symmetry in its own way. Tick one on its own to see what it does. Under each one is where that machine's number comes from.</p>
+  <div id="looks"></div>
+
+  <div class="grp">Shape</div>
+  <div class="seg" role="group" aria-label="Symmetry">
+    <button type="button" data-mode="rot" aria-pressed="true">Rotate</button>
+    <button type="button" data-mode="mir" aria-pressed="false">Rotate + mirror</button>
+  </div>
+  <label for="folds">Folds <span class="val" id="foldval"></span></label>
+  <input id="folds" type="range" min="0" max="2" step="1" value="1">
+  <label for="depth">Fractal depth <span class="val" id="depthval">1</span></label>
+  <p class="hint">Nested, smaller, twisted copies of everything you draw. Ordinary graphics, not quantum.</p>
+  <input id="depth" type="range" min="1" max="5" step="1" value="1">
+
+  <details>
+    <summary>Visual</summary>
+    <label for="motion">Motion <span class="val" id="motionval">0.50</span></label>
+    <p class="hint">How fast the whole picture turns and drifts outward. Ordinary graphics, not quantum.</p>
+    <input id="motion" type="range" min="0" max="1" step="0.05" value="0.5">
+    <label for="life">Ink lasts <span class="val" id="lifeval">9 s</span></label>
+    <p class="hint">How long a line stays crisp before it melts into glow and fades.</p>
+    <input id="life" type="range" min="3" max="30" step="1" value="9">
+  </details>
+
+  <div class="row">
+    <button id="auto" type="button" aria-pressed="true">Auto-draw</button>
+    <button id="guides" type="button" aria-pressed="false">Guides</button>
+    <button id="save" type="button">Save</button>
+  </div>
+
+  <div class="ringbox">
+    <canvas id="ring" aria-label="The qubit ring"></canvas>
+    <p>The machine's qubits, one dot each. Each dot shows what the broken symmetries are doing to that wedge right now: its color and whether it fills closed shapes. Orange links are the pairs whose gates differ.</p>
+  </div>
+
+  <details class="about">
+    <summary>About</summary>
+    <h2>Why I made this</h2>
+    <p>I’ve been exploring symmetry in a quantum circuit, and learning that symmetry can be used as an error detector for qubits piqued my interest.</p>
+    <p>A circuit designed to respect some symmetry has to give the same output for every symmetrically-transformed version of the problem, whether the problem has been rotated or reflected or any combination of the two. In other words, the circuit’s answer must not care about whether or not the problem has been rotated, because it must recognize that what it’s looking at is still the problem.</p>
+    <p>So, if an output is not ‘symmetric’ (i.e. it has changed after a symmetric transformation) then that change works as a free error detector; something in the hardware may have treated the qubits differently, and you can find that out without running any extra check.</p>
+    <p class="note">The limit is that it only catches errors that treat qubits differently. An error that hits every qubit the same way makes the answer worse but still leaves it symmetric, so symmetry will not flag it.</p>
+    <p>I wanted to visualize how different errors could break symmetries, and to what extent. In this demo, the symmetry belongs to a kaleidoscope: every wedge of the kaleidoscope you draw is a qubit that is meant to behave exactly like the others, so every wedge should draw an identical copy of your line. When the output is not the same, one wedge stops matching another.</p>
+    <p>Different errors in the hardware break the symmetry in different ways, so I gave each one its own visible way of breaking the kaleidoscope, and you can compare IonQ and IBM side by side to see how the same kaleidoscope breaks differently depending on their different error rates.</p>
+
+    <h2>What is happening</h2>
+    <p>Each wedge of the kaleidoscope is one qubit in a ring. When your mouse moves, a small circuit runs on the ring, and a solid line is drawn in each wedge. On a perfect (no-error) machine, all qubits are treated equally and every action is performed exactly as intended. Since the circuit is symmetric, there is no difference between wedges. The chaos option demonstrates the opposite effect: symmetry is barely preserved from wedge to wedge.</p>
+    <p>A real machine is not perfect, and there are several different sources of error that can break a circuit’s symmetry. In this demo, each source breaks the symmetry in its own visible way, so you can tell them apart. Tick one off and it disappears, so you can see each error break the symmetry of the kaleidoscope by itself.</p>
+
+    <h2>The three broken symmetries</h2>
+    <p>First the three at a glance. Below the table, each one is explained in two parts: the error itself and how it would break a symmetric circuit’s output, then what you see in the kaleidoscope.</p>
+    <table class="glance">
+      <tr><th></th><th>Error</th><th>What you see</th><th>IonQ</th><th>IBM</th></tr>
+      <tr><td>1</td><td>Qubits are not identical</td><td>Wedges come out in different colors</td><td>All one color</td><td>Colors differ</td></tr>
+      <tr><td>2</td><td>Two-qubit gates and connectivity</td><td>The line bends</td><td>Same small bend everywhere</td><td>Bends a lot where swaps are needed</td></tr>
+      <tr><td>3</td><td>Shots</td><td>Closed shapes fill in on some wedges only</td><td>Often</td><td>Almost never</td></tr>
+    </table>
+
+    <div class="bs" style="--c: hsl(300,90%,72%)">
+      <h3><span class="num">1</span>Qubits are not identical</h3>
+      <div class="blk">
+        <div class="tag2">The error</div>
+        <p>In a symmetric circuit, turning or flipping the board just moves each square onto a different qubit, and the circuit is built so that this should not matter, because every qubit does the same job. That only works if the qubits are interchangeable.</p>
+        <p>In real hardware they are not quite: each qubit has its own one-qubit gate error, loses its state at its own rate while it waits, and is read out with its own measurement error. So the same board lands on better or worse qubits depending on its orientation, and the output changes.</p>
+        <p>Superconducting qubits are each made a little differently, and a chip's calibration lists a different error for each. Ions are identical atoms and IonQ publishes one number for all of them.</p>
+      </div>
+      <div class="blk vis">
+        <div class="tag2">In the kaleidoscope</div>
+        <p>In a perfect kaleidoscope, every copy of your line is the same color. Here the copies come out in different colors: while the line you draw might be green, the other wedges' lines shift to pink, purple and so on. The bigger the differences between the qubits' errors, the further apart the colors.</p>
+        <p>The shifts are the same every time you draw, because they come from fixed differences between the qubits. IonQ's wedges all share one color, because IonQ publishes one number for all its qubits. IBM's do not.</p>
+      </div>
+    </div>
+
+    <div class="bs" style="--c: hsl(38,95%,62%)">
+      <h3><span class="num">2</span>Two-qubit gates and connectivity</h3>
+      <div class="blk">
+        <div class="tag2">The error</div>
+        <p>The circuit applies the same two-qubit interaction between every pair of neighboring squares. These gates are the hardest operations, and they carry the largest error.</p>
+        <p>If some pairs are worse than others, or cannot interact directly and need extra swap gates, a turned board puts the same interaction on a different pair with a different error, and the output changes.</p>
+        <p>Any two ions can interact directly, so IonQ has the same error on every pair and needs no swaps. A superconducting chip only lets neighbors interact, so a distant pair needs swaps, and each swap adds error.</p>
+      </div>
+      <div class="blk vis">
+        <div class="tag2">In the kaleidoscope</div>
+        <p>Every wedge should repeat the exact shape and direction of the line you draw. Here the copies are not repeated perfectly: each one curves away from your line in its own direction, and the bigger that pair's error, the more it bends. The copy under your cursor stays exact.</p>
+        <p>Which way each wedge bends is made up, the same for every machine, because no machine publishes it. Only the size of the bend comes from the error. IonQ bends every wedge by the same modest amount, and IBM bends a lot where swaps are needed.</p>
+      </div>
+    </div>
+
+    <div class="bs" style="--c: hsl(140,80%,62%)">
+      <h3><span class="num">3</span>Shots</h3>
+      <div class="blk">
+        <div class="tag2">The error</div>
+        <p>A quantum computer cannot hand you a probability directly. Every run gives just one random outcome per qubit, a 0 or a 1, so to find out how likely an outcome is, it runs the same circuit again and again and counts. Each run is a shot. It is like trying to find out whether a coin is fair by flipping it: 10 flips could easily give 7 heads, while 10,000 flips will land very close to half.</p>
+        <p>That makes every answer an estimate, and an estimate from few shots is a little off by chance, even when the hardware does everything perfectly. That is the error.</p>
+        <p>For a symmetric circuit, the true probability of an outcome is the same for every orientation of the board, but you never see the true probability. You see an estimate from each orientation's own shots, and those estimates scatter: say 26% for one orientation, 33% for the next and 29% for another, when the truth is 30% for all of them. So the outputs differ between orientations and the symmetry looks broken, even though the circuit itself kept it.</p>
+        <p>The scatter shrinks with the square root of the number of shots. In this demo, in one second:</p>
+        <table class="nums">
+          <tr><th>Machine</th><th>Shots in 1 second</th><th>Typical scatter</th></tr>
+          <tr><td>IonQ Forte</td><td>about 143</td><td>about 4 percentage points</td></tr>
+          <tr><td>IBM Fez</td><td>about 379,000</td><td>less than 0.1 percentage points</td></tr>
+        </table>
+        <p>IonQ's number uses gate times I assumed, from IonQ Aria's published figures.</p>
+        <p>Shots are limited by time. A machine can only run so many in the time you give it, and a faster machine fits more. So IonQ's symmetry is blurred by chance much more than IBM's, with nothing wrong with its qubits. This is where machine speed shows up as broken symmetry.</p>
+        <p>It is also what sets shot errors apart from the other two: give a machine more time and shot errors shrink, but fixed differences between qubits do not average away.</p>
+      </div>
+      <div class="blk vis">
+        <div class="tag2">In the kaleidoscope</div>
+        <p>When your line crosses itself or comes back to where it has been, it has made a closed shape, such as a loop, a circle or a petal, and the kaleidoscope detects that. Every wedge should repeat that shape in exactly the same way.</p>
+        <p>Instead, each wedge flips its own coin: it either fills its copy of the shape with a translucent color or leaves it empty, so the copies disagree with each other about whether the shape is filled.</p>
+        <p>Unlike the other two errors, which are fixed for each qubit, shot errors are random and different every time, so which wedges fill changes every time you draw a closed shape.</p>
+        <p>The fewer shots, the better the odds of a fill, so IonQ's copies disagree a lot and IBM's almost never do. Only the odds come from the shot count, which is set by how many runs fit in the 1 second each machine gets per dab. The coin flips are random.</p>
+      </div>
+    </div>
+
+    <h2>Where the numbers come from</h2>
+    <dl class="srcs">
+      <dt>IBM</dt>
+      <dd>Per-qubit and per-pair numbers from the calibration snapshot of each simulated chip (Sherbrooke, Torino or Fez). The ring sits where the earlier compile put it on the chip.</dd>
+      <dt>IonQ</dt>
+      <dd>The averages IonQ publishes, the same for every qubit.</dd>
+    </dl>
+    <p>Every line in the panel is tagged with its source.</p>
+
+    <h2>Honesty notes</h2>
+    <ul>
+      <li>These are simulators, not real hardware. Real machines drift and differ from their published noise models.</li>
+      <li>Real differences are small. The exaggeration slider turns up how strongly each broken symmetry responds, the same for every machine. At ×1 the pictures are close to the true size.</li>
+      <li>IBM's frequency per qubit is only in the Sherbrooke snapshot, so broken symmetry 1 uses each qubit's one-qubit gate error, idle error and readout error for every chip.</li>
+      <li>Decoherence for ions uses T2 of about 1 second and gate times from IonQ Aria's published figures, with gates one after another. Both are my assumptions for the circuit time.</li>
+      <li>Max chaos is not a real machine. How an error becomes a color, a shape fill or a bend is an artistic choice, not physics.</li>
+      <li>The symmetric-circuit idea comes from geometric quantum machine learning (PennyLane's tic-tac-toe demo and Meyer et al., 2023). The perfect circuit is in <code>main.py</code> as plain Qiskit.</li>
+    </ul>
+  </details>
+</div>
+<script src="error_profiles.js"></script>
+<script src="main.js"></script>
+</body>
+</html>
